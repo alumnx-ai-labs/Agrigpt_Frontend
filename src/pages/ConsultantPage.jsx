@@ -1,224 +1,226 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import './ConsultantPage.css';
 
 const ConsultantPage = () => {
-  const [selectedOption, setSelectedOption] = useState('Citrus Crop');
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedOption, setSelectedOption] = useState('Government Schemes');
   const [query, setQuery] = useState('');
-  const [response, setResponse] = useState('');
-  const [showResponse, setShowResponse] = useState(false);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const chatEndRef = useRef(null);
 
-  const options = ['Citrus Crop', 'Government Schemes'];
+  const options = ['Government Schemes', 'Citrus Crop'];
 
-  const handleOptionSelect = (option) => {
-    setSelectedOption(option);
-    setShowDropdown(false);
-    setQuery('');
-    setResponse('');
-    setShowResponse(false);
-  };
+  // Backend URL - Using your Render deployment
+  const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://0.0.0.0:8000';
 
-
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatHistory]);
 
   const handleSubmit = async () => {
-    if (query.trim()) {
-      setShowResponse(false);
-      setResponse('Loading...');
-      setShowResponse(true);
+    if (!query.trim()) {
+      alert('Please enter a query');
+      return;
+    }
+
+    // Add user message to chat
+    const userMessage = {
+      type: 'user',
+      message: query,
+      timestamp: new Date().toISOString()
+    };
+    setChatHistory(prev => [...prev, userMessage]);
+
+    setIsLoading(true);
+    const currentQuery = query;
+    setQuery(''); // Clear input immediately
+    
+    try {
+      // Determine endpoint based on selected option
+      const endpoint = selectedOption === 'Citrus Crop' 
+        ? '/ask-consultant' 
+        : '/query-government-schemes';
       
-      try {
-        // Call your backend API here
-        const response = await fetch('YOUR_BACKEND_API_URL', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: query,
-            option: selectedOption
-          })
-        });
-        
-        const data = await response.json();
-        setResponse(data.response || data.message || 'No response received');
-      } catch (error) {
-        console.error('Error calling API:', error);
-        setResponse('Error: Unable to get response from server. Please try again.');
+      console.log('Sending request to:', `${BACKEND_URL}${endpoint}`);
+      
+      // Format chat history for API (only include previous messages, not the current one)
+      const formattedHistory = chatHistory
+        .filter(msg => msg.type === 'user' || msg.type === 'assistant')
+        .map(msg => ({
+          role: msg.type === 'user' ? 'user' : 'assistant',
+          content: msg.message
+        }));
+
+      console.log('Request payload:', {
+        query: currentQuery,
+        chat_history: formattedHistory
+      });
+
+      const result = await fetch(`${BACKEND_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: currentQuery,
+          chat_history: formattedHistory
+        }),
+      });
+
+      console.log('Response status:', result.status);
+
+      if (!result.ok) {
+        const errorText = await result.text();
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! status: ${result.status} - ${errorText}`);
       }
+
+      const data = await result.json();
+      console.log('Response data:', data);
+      
+      // Add AI response to chat
+      const aiMessage = {
+        type: 'assistant',
+        message: data.response || 'No response received',
+        sources: data.sources || [],
+        timestamp: new Date().toISOString()
+      };
+      setChatHistory(prev => [...prev, aiMessage]);
+      
+    } catch (error) {
+      console.error('Full error:', error);
+      const errorMessage = {
+        type: 'error',
+        message: `Error: ${error.message}. Please check the console for details.`,
+        timestamp: new Date().toISOString()
+      };
+      setChatHistory(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const clearChat = () => {
+    setChatHistory([]);
+    setQuery('');
+  };
+
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#e8e4e1',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '2rem'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '3rem',
-        maxWidth: '1200px',
-        width: '100%',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}>
-        <h1 style={{
-          textAlign: 'center',
-          fontSize: '2.5rem',
-          marginBottom: '3rem',
-          fontWeight: 'bold'
-        }}>
+    <div className="consultant-container">
+      <div className="consultant-card">
+        <h1 className="consultant-title">
           AgriGPT SME AI Consultant
         </h1>
 
-        {/* Dropdown Section */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '2rem',
-          marginBottom: '2rem'
-        }}>
-          <label style={{
-            fontSize: '1.5rem',
-            fontWeight: '600',
-            minWidth: '200px'
-          }}>
-            Select an option
-          </label>
-          
-          <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              style={{
-                width: '100%',
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#f0e6e6',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
+        <div className="topic-selector-container">
+          <div className="topic-selector-wrapper">
+            <label className="topic-label">
+              Select Topic
+            </label>
+            <select
+              className="topic-select"
+              value={selectedOption}
+              onChange={(e) => setSelectedOption(e.target.value)}
+              disabled={isLoading}
             >
-              {selectedOption}
-              <span style={{ fontSize: '1.5rem' }}>▼</span>
-            </button>
+              {options.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-            {showDropdown && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                backgroundColor: 'white',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                marginTop: '0.25rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                zIndex: 10
-              }}>
-                {options.map((option) => (
-                  <div
-                    key={option}
-                    onClick={() => handleOptionSelect(option)}
-                    style={{
-                      padding: '0.75rem 1.5rem',
-                      cursor: 'pointer',
-                      fontSize: '1.25rem',
-                      fontWeight: '600',
-                      backgroundColor: option === selectedOption ? '#f0e6e6' : 'white',
-                      borderBottom: option === 'Citrus Crop' ? '1px solid #eee' : 'none'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (option !== selectedOption) {
-                        e.target.style.backgroundColor = '#f5f5f5';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (option !== selectedOption) {
-                        e.target.style.backgroundColor = 'white';
-                      }
-                    }}
-                  >
-                    {option}
+        <div className="chat-container">
+          
+
+          <div className="chat-messages">
+            {chatHistory.length === 0 ? (
+              <div className="empty-chat">
+                <div className="empty-chat-icon">💬</div>
+                <p className="empty-chat-title">
+                  Ask me anything about {selectedOption}
+                </p>
+                <p className="empty-chat-subtitle">
+                  Start a conversation by typing your question below
+                </p>
+              </div>
+            ) : (
+              <>
+                {chatHistory.map((msg, index) => (
+                  <div key={index} className="message-wrapper">
+                    {msg.type === 'user' && (
+                      <div className="user-message-container">
+                        <div className="user-message">
+                          {msg.message}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {msg.type === 'assistant' && (
+                      <div className="assistant-message-container">
+                        <div className="assistant-message">
+                          {msg.message}
+                        </div>
+                        {msg.sources && msg.sources.length > 0 && (
+                          <div className="sources-container">
+                            <div className="sources-title">
+                              📚 Sources:
+                            </div>
+                            <div className="sources-list">
+                              {msg.sources.map((source, idx) => (
+                                <span key={idx} className="source-tag">
+                                  {source}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {msg.type === 'error' && (
+                      <div className="error-message">
+                        ⚠️ {msg.message}
+                      </div>
+                    )}
                   </div>
                 ))}
-              </div>
+                <div ref={chatEndRef} />
+              </>
             )}
           </div>
-        </div>
 
-        {/* Query Input Section */}
-        <div style={{
-          backgroundColor: '#f0f0f0',
-          padding: '2.5rem',
-          marginBottom: '2rem',
-          borderRadius: '4px',
-          minHeight: '150px'
-        }}>
-          <textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{
-              width: '100%',
-              minHeight: '100px',
-              border: 'none',
-              backgroundColor: 'transparent',
-              fontSize: '1.5rem',
-              fontWeight: '600',
-              resize: 'none',
-              outline: 'none',
-              fontFamily: 'inherit',
-              lineHeight: '1.6'
-            }}
-          />
-        </div>
-
-        {/* Submit Button */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          marginBottom: '2rem'
-        }}>
-          <button
-            onClick={handleSubmit}
-            style={{
-              backgroundColor: '#4c51bf',
-              color: 'white',
-              padding: '0.875rem 3rem',
-              borderRadius: '50px',
-              fontSize: '1.25rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              border: 'none'
-            }}
-          >
-            Submit
-          </button>
-        </div>
-
-        {/* Response Section */}
-        {showResponse && (
-          <div style={{
-            backgroundColor: '#b2d8d8',
-            padding: '2rem',
-            borderRadius: '4px'
-          }}>
-            <p style={{
-              fontSize: '1.5rem',
-              fontWeight: '600',
-              margin: 0,
-              whiteSpace: 'pre-line',
-              lineHeight: '1.8'
-            }}>
-              {response}
-            </p>
+          <div className="input-container">
+            <div className="input-wrapper">
+              <textarea
+                className="message-input"
+                placeholder="Ask your question... (Press Enter to send, Shift+Enter for new line)"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isLoading}
+                rows={2}
+              />
+              <button
+                className="send-button"
+                onClick={handleSubmit}
+                disabled={isLoading || !query.trim()}
+              >
+                {isLoading ? '⏳' : '➤'}
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
