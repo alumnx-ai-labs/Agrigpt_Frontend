@@ -5,27 +5,103 @@ const AdminPage = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
 
   const options = ['Citrus Crop', 'Government Schemes'];
+
+  // API base URL
+  const API_URL = 'https://agrigpt-backend-rag.onrender.com';
 
   const handleOptionSelect = (option) => {
     setSelectedOption(option);
     setShowDropdown(false);
     setUploadSuccess(false);
     setSelectedFile(null);
+    setError(null);
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file && file.type === 'application/pdf') {
       setSelectedFile(file);
+      setError(null);
+    } else if (file) {
+      setError('Please select a valid PDF file');
+      setSelectedFile(null);
     }
   };
 
-  const handleUpload = () => {
-    if (selectedFile) {
-      // Simulate upload process
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setError('Please select a file first');
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+    setUploadSuccess(false);
+
+    try {
+      // Determine endpoint based on selected option
+      let endpoint;
+      if (selectedOption === 'Citrus Crop') {
+        endpoint = `${API_URL}/upload-crop-data`;
+      } else if (selectedOption === 'Government Schemes') {
+        endpoint = `${API_URL}/upload-government-schemes`;
+      }
+
+      // Create FormData object
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      console.log('Selected option:', selectedOption);
+      console.log('Uploading to:', endpoint);
+      console.log('File:', selectedFile.name);
+      console.log('File type:', selectedFile.type);
+      console.log('File size:', selectedFile.size);
+
+      // Make API call to the appropriate endpoint
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: formData,
+      });
+
+      console.log('Response status:', response.status);
+
+      // Try to get response body regardless of status
+      let responseData;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        responseData = await response.text();
+      }
+      
+      console.log('Response data:', responseData);
+
+      if (!response.ok) {
+        const errorMessage = typeof responseData === 'object' 
+          ? (responseData?.detail || responseData?.message || JSON.stringify(responseData))
+          : responseData;
+        throw new Error(`Upload failed (${response.status}): ${errorMessage}`);
+      }
+
+      console.log('Upload successful');
+
       setUploadSuccess(true);
+      setSelectedFile(null);
+      
+      // Reset file input
+      const fileInput = document.getElementById('file-input');
+      if (fileInput) fileInput.value = '';
+
+    } catch (err) {
+      console.error('Upload error:', err);
+      setError(err.message || 'Failed to upload file. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -159,14 +235,53 @@ const AdminPage = () => {
           </p>
         </div>
 
-        {/* Upload Button */}
+        {/* File Selection Display */}
+        {selectedFile && (
+          <div style={{
+            backgroundColor: '#f9f9f9',
+            padding: '1rem',
+            marginBottom: '1rem',
+            borderRadius: '4px',
+            border: '1px solid #ddd'
+          }}>
+            <p style={{
+              margin: 0,
+              fontSize: '1rem',
+              color: '#333'
+            }}>
+              Selected file: <strong>{selectedFile.name}</strong>
+            </p>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div style={{
+            backgroundColor: '#fee',
+            border: '1px solid #fcc',
+            padding: '1rem',
+            borderRadius: '4px',
+            marginBottom: '1rem'
+          }}>
+            <p style={{
+              margin: 0,
+              color: '#c00',
+              fontSize: '1rem'
+            }}>
+              {error}
+            </p>
+          </div>
+        )}
+
+        {/* Upload Buttons */}
         <div style={{
           display: 'flex',
           justifyContent: 'flex-end',
+          gap: '1rem',
           marginBottom: '2rem'
         }}>
           <label style={{
-            backgroundColor: '#4c51bf',
+            backgroundColor: '#6b7280',
             color: 'white',
             padding: '0.875rem 3rem',
             borderRadius: '50px',
@@ -175,15 +290,33 @@ const AdminPage = () => {
             cursor: 'pointer',
             display: 'inline-block'
           }}>
-            Upload
+            Choose File
             <input
+              id="file-input"
               type="file"
               accept=".pdf"
               onChange={handleFileChange}
-              onClick={handleUpload}
               style={{ display: 'none' }}
             />
           </label>
+
+          <button
+            onClick={handleUpload}
+            disabled={!selectedFile || uploading}
+            style={{
+              backgroundColor: !selectedFile || uploading ? '#9ca3af' : '#4c51bf',
+              color: 'white',
+              padding: '0.875rem 3rem',
+              borderRadius: '50px',
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              cursor: !selectedFile || uploading ? 'not-allowed' : 'pointer',
+              border: 'none',
+              display: 'inline-block'
+            }}
+          >
+            {uploading ? 'Uploading...' : 'Upload'}
+          </button>
         </div>
 
         {/* Success Message */}
