@@ -10,8 +10,8 @@ const AdminPage = () => {
 
   const options = ['Citrus Crop', 'Government Schemes'];
 
-  // API base URL
-  const API_URL = 'https://agrigpt-backend-rag.onrender.com';
+  // API base URL - uses environment variable for flexibility
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   const handleOptionSelect = (option) => {
     setSelectedOption(option);
