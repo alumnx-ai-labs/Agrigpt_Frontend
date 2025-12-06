@@ -114,101 +114,36 @@ const AdminPage = () => {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#e8e4e1',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '2rem'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '3rem',
-        maxWidth: '1200px',
-        width: '100%',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}>
-        <h1 style={{
-          textAlign: 'center',
-          fontSize: '2.5rem',
-          marginBottom: '3rem',
-          fontWeight: 'bold'
-        }}>
+    <div className="min-h-screen bg-[#e8e4e1] flex justify-center items-center p-8">
+      <div className="bg-white p-12 max-w-6xl w-full shadow-md">
+        <h1 className="text-center text-4xl mb-12 font-bold">
           AgriGPT SME AI Consultant
         </h1>
 
         {/* Dropdown Section */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '2rem',
-          marginBottom: '2rem'
-        }}>
-          <label style={{
-            fontSize: '1.5rem',
-            fontWeight: '600',
-            minWidth: '200px'
-          }}>
+        <div className="flex items-center gap-8 mb-8">
+          <label className="text-2xl font-semibold min-w-[200px]">
             Select an option
           </label>
           
-          <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+          <div className="relative flex-1 max-w-md">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              style={{
-                width: '100%',
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#f0e6e6',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
+              className="w-full px-6 py-3 bg-[#f0e6e6] border-none rounded text-xl font-semibold cursor-pointer flex justify-between items-center"
             >
               {selectedOption}
-              <span style={{ fontSize: '1.5rem' }}>▼</span>
+              <span className="text-2xl">▼</span>
             </button>
 
             {showDropdown && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                backgroundColor: 'white',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                marginTop: '0.25rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                zIndex: 10
-              }}>
+              <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded mt-1 shadow-md z-10">
                 {options.map((option) => (
                   <div
                     key={option}
                     onClick={() => handleOptionSelect(option)}
-                    style={{
-                      padding: '0.75rem 1.5rem',
-                      cursor: 'pointer',
-                      fontSize: '1.25rem',
-                      fontWeight: '600',
-                      backgroundColor: option === selectedOption ? '#f0e6e6' : 'white',
-                      borderBottom: '1px solid #eee'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (option !== selectedOption) {
-                        e.target.style.backgroundColor = '#f5f5f5';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (option !== selectedOption) {
-                        e.target.style.backgroundColor = 'white';
-                      }
-                    }}
+                    className={`px-6 py-3 cursor-pointer text-xl font-semibold border-b border-gray-200 hover:bg-gray-100 ${
+                      option === selectedOption ? 'bg-[#f0e6e6]' : 'bg-white'
+                    }`}
                   >
                     {option}
                   </div>
@@ -219,36 +154,16 @@ const AdminPage = () => {
         </div>
 
         {/* Upload Section */}
-        <div style={{
-          backgroundColor: '#f0f0f0',
-          padding: '2.5rem',
-          marginBottom: '2rem',
-          borderRadius: '4px'
-        }}>
-          <p style={{
-            fontSize: '1.5rem',
-            fontWeight: '600',
-            margin: 0,
-            lineHeight: '1.6'
-          }}>
+        <div className="bg-gray-100 p-10 mb-8 rounded">
+          <p className="text-2xl font-semibold m-0 leading-relaxed">
             {getInstructionText()}
           </p>
         </div>
 
         {/* File Selection Display */}
         {selectedFile && (
-          <div style={{
-            backgroundColor: '#f9f9f9',
-            padding: '1rem',
-            marginBottom: '1rem',
-            borderRadius: '4px',
-            border: '1px solid #ddd'
-          }}>
-            <p style={{
-              margin: 0,
-              fontSize: '1rem',
-              color: '#333'
-            }}>
+          <div className="bg-gray-50 p-4 mb-4 rounded border border-gray-300">
+            <p className="m-0 text-base text-gray-800">
               Selected file: <strong>{selectedFile.name}</strong>
             </p>
           </div>
@@ -256,64 +171,34 @@ const AdminPage = () => {
 
         {/* Error Message */}
         {error && (
-          <div style={{
-            backgroundColor: '#fee',
-            border: '1px solid #fcc',
-            padding: '1rem',
-            borderRadius: '4px',
-            marginBottom: '1rem'
-          }}>
-            <p style={{
-              margin: 0,
-              color: '#c00',
-              fontSize: '1rem'
-            }}>
+          <div className="bg-red-50 border border-red-200 p-4 rounded mb-4">
+            <p className="m-0 text-red-700 text-base">
               {error}
             </p>
           </div>
         )}
 
         {/* Upload Buttons */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: '1rem',
-          marginBottom: '2rem'
-        }}>
-          <label style={{
-            backgroundColor: '#6b7280',
-            color: 'white',
-            padding: '0.875rem 3rem',
-            borderRadius: '50px',
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            display: 'inline-block'
-          }}>
+        <div className="flex justify-end gap-4 mb-8">
+          <label className="bg-gray-500 text-white px-12 py-3.5 rounded-full text-xl font-semibold cursor-pointer inline-block hover:bg-gray-600 transition-colors">
             Choose File
             <input
               id="file-input"
               type="file"
               accept=".pdf"
               onChange={handleFileChange}
-              style={{ display: 'none' }}
+              className="hidden"
             />
           </label>
 
           <button
             onClick={handleUpload}
             disabled={!selectedFile || uploading}
-            style={{
-              backgroundColor: !selectedFile || uploading ? '#9ca3af' : '#4c51bf',
-              color: 'white',
-              padding: '0.875rem 3rem',
-              borderRadius: '50px',
-              fontSize: '1.25rem',
-              fontWeight: '600',
-              cursor: !selectedFile || uploading ? 'not-allowed' : 'pointer',
-              border: 'none',
-              display: 'inline-block'
-            }}
+            className={`px-12 py-3.5 rounded-full text-xl font-semibold border-none inline-block transition-colors ${
+              !selectedFile || uploading
+                ? 'bg-gray-400 cursor-not-allowed text-white'
+                : 'bg-indigo-700 hover:bg-indigo-800 text-white cursor-pointer'
+            }`}
           >
             {uploading ? 'Uploading...' : 'Upload'}
           </button>
@@ -321,17 +206,8 @@ const AdminPage = () => {
 
         {/* Success Message */}
         {uploadSuccess && (
-          <div style={{
-            backgroundColor: '#b2d8d8',
-            padding: '2rem',
-            borderRadius: '4px',
-            textAlign: 'center'
-          }}>
-            <p style={{
-              fontSize: '1.5rem',
-              fontWeight: '600',
-              margin: 0
-            }}>
+          <div className="bg-[#b2d8d8] p-8 rounded text-center">
+            <p className="text-2xl font-semibold m-0">
               Thank you! The PDF file has been successfully ingested.
             </p>
           </div>
