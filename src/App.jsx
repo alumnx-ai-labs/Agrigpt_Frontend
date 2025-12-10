@@ -7,16 +7,23 @@ import Navbar from './components/Navbar';
 import AdminPage from './pages/AdminPage';
 import ConsultantPage from './pages/ConsultantPage';
 import LoginPage from './pages/LoginPage';
+import RecentChats from './pages/RecentChats';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <div className="min-h-screen bg-notion-bg">
+          {/* Note: With the new Sidebar layout, you might want to hide Navbar 
+              on /consultant and /recents routes later if it looks double-stacked */}
           <Navbar />
+          
           <Routes>
-            <Route path='/' element={<Navigate to="/consultant" replace />} />
+            {/* Show login first */}
+            <Route path='/' element={<Navigate to="/login" replace />} />
+
             <Route path='/login' element={<LoginPage />} />
+
             <Route
               path='/admin'
               element={
@@ -25,6 +32,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path='/consultant'
               element={
@@ -33,7 +41,19 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="*" element={<Navigate to="/consultant" replace />} />
+
+            {/* --- NEW ROUTE FOR HISTORY --- */}
+            <Route
+              path='/recents/:category'
+              element={
+                <ProtectedRoute>
+                  <RecentChats />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Fallback to login */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </div>
       </AuthProvider>
@@ -42,4 +62,3 @@ function App() {
 }
 
 export default App;
-
