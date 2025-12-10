@@ -1,33 +1,132 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react'; // <--- FIXED: Added useCallback
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Send, Camera, X, Sparkles, Copy, CheckCircle2, ChevronDown } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { auth } from '../services/firebase'; 
+import { useAuth } from '../context/AuthContext';
+import Sidebar from '../components/Sidebar';
+import { v4 as uuidv4 } from 'uuid';
 
 const ConsultantPage = () => {
-  const [selectedOption, setSelectedOption] = useState('Government Schemes');
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // --- UI State ---
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isContextOpen, setIsContextOpen] = useState(false);
+  const [selectedContext, setSelectedContext] = useState('Government Schemes');
+  const [currentChatId, setCurrentChatId] = useState(null);
+  
+  // --- Chat State ---
   const [query, setQuery] = useState('');
-  const [chatHistory, setChatHistory] = useState([]);
+  const [messages, setMessages] = useState([]); 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [expandedImage, setExpandedImage] = useState(null);
+  const [copiedIndex, setCopiedIndex] = useState(null);
+  
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const options = ['Government Schemes', 'Citrus Crop'];
-
-  // Backend URL - Using your Render deployment
-  const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-  // Auto-scroll to bottom when new messages arrive
+  // --- 1. Load Chat (From Router or Fresh) ---
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory]);
+    if (location.state?.existingChat) {
+      const chat = location.state.existingChat;
+      setMessages(chat.messages || []);
+      setCurrentChatId(chat.id);
+      if (chat.type === 'citrus') setSelectedContext('Citrus Crop');
+      else setSelectedContext('Government Schemes');
+    } else {
+      setMessages([]);
+      setCurrentChatId(uuidv4());
+    }
+  }, [location.state]);
 
+  // --- 2. Local Storage Helper ---
+  const saveChatToLocal = useCallback((newMessages) => {
+    if (!auth.currentUser) return;
+    
+    const stored = localStorage.getItem('agrigpt_chats');
+    let chats = stored ? JSON.parse(stored) : [];
+    
+    const existingIndex = chats.findIndex(c => c.id === currentChatId);
+    
+    const chatData = {
+      id: currentChatId,
+      userId: auth.currentUser.uid,
+      type: selectedContext === 'Citrus Crop' ? 'citrus' : 'schemes',
+      title: newMessages.length > 0 ? newMessages[0].message.slice(0, 40) + "..." : "New Chat",
+      messages: newMessages,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (existingIndex >= 0) {
+      chats[existingIndex] = chatData;
+    } else {
+      chats.unshift(chatData);
+    }
+
+    localStorage.setItem('agrigpt_chats', JSON.stringify(chats));
+  }, [currentChatId, selectedContext]);
+
+  // --- 3. Mock AI Logic ---
+  const getMockAIResponse = (userQuery, context) => {
+    if (context === 'Citrus Crop') {
+      return "Based on the symptoms described, this appears to be Citrus Canker. I recommend removing infected twigs and applying a copper-based bactericide spray. Ensure you water the plant at the base to avoid wetting the foliage.";
+    }
+    return "The PM Kisan Samman Nidhi scheme provides ₹6,000 annually to eligible farmer families. The amount is released in three equal installments of ₹2,000 each directly into your bank account. You can check your status on the official pmkisan.gov.in portal.";
+  };
+
+  // --- 4. Handle Submit ---
+  const handleSubmit = async (textOverride = null) => {
+    const textToSend = textOverride || query;
+    if (!textToSend.trim() && !selectedImage) return;
+
+    // User Message
+    const userMsg = {
+      type: 'user',
+      message: textToSend,
+      image: imagePreview,
+      timestamp: new Date().toISOString()
+    };
+    
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
+    saveChatToLocal(updatedMessages);
+    
+    setQuery('');
+    if (selectedImage) {
+      setSelectedImage(null);
+      setImagePreview(null);
+    }
+    
+    setIsLoading(true);
+
+    // Simulated AI Response
+    setTimeout(() => {
+      const aiResponse = {
+        type: 'assistant',
+        message: getMockAIResponse(textToSend, selectedContext),
+        images: [],
+        timestamp: new Date().toISOString()
+      };
+      
+      const finalMessages = [...updatedMessages, aiResponse];
+      setMessages(finalMessages);
+      saveChatToLocal(finalMessages);
+      setIsLoading(false);
+    }, 1500);
+  };
+
+  // --- Utilities ---
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file) {
       setSelectedImage(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
+      reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
     }
   };
@@ -35,207 +134,26 @@ const ConsultantPage = () => {
   const clearImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSubmit = async () => {
-    if (!query.trim() && !selectedImage) {
-      alert('Please enter a query or upload an image');
-      return;
-    }
+  const copyMessage = (text, index) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
 
-    // Add user message to chat
-    const userMessage = {
-      type: 'user',
-      message: query || 'Analyze this crop image',
-      image: imagePreview,
-      timestamp: new Date().toISOString()
-    };
-    setChatHistory(prev => [...prev, userMessage]);
+  const handleSignOut = async () => {
+    await signOut(auth);
+    navigate('/login');
+  };
 
-    setIsLoading(true);
-    const currentQuery = query || 'What disease does this crop have and how can I treat it?';
-    setQuery('');
-
-    try {
-      let data;
-
-      // Check if this is an image query (text-to-image search)
-      const isImageSearchQuery = selectedOption === 'Citrus Crop' &&
-        /\b(show|images?|pictures?|photos?|display|see|send|give|return|get|find|similar)\b/i.test(currentQuery);
-
-      // Check if user wants to find similar images (image-to-image search)
-      const isSimilarImageQuery = selectedImage &&
-        /\b(similar|like this|find|match|search|same|compare)\b/i.test(currentQuery);
-
-      if (selectedOption === 'Citrus Crop' && selectedImage && isSimilarImageQuery) {
-        // Image-to-image search: find similar images in database
-        const formData = new FormData();
-        formData.append('file', selectedImage);
-
-        console.log('Sending image-to-image search to:', `${BACKEND_URL}/query-by-image`);
-
-        const result = await fetch(`${BACKEND_URL}/query-by-image?top_k=5`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!result.ok) {
-          const errorText = await result.text();
-          throw new Error(`HTTP error! status: ${result.status} - ${errorText}`);
-        }
-
-        data = await result.json();
-        clearImage();
-
-        // Format response with similar images
-        const imageResults = data.results || [];
-        const aiMessage = {
-          type: 'assistant',
-          message: imageResults.length > 0
-            ? `Found ${imageResults.length} similar images in the database:`
-            : 'No similar images found in the database.',
-          images: imageResults.map(img => ({
-            url: img.image_url.startsWith('/') ? `${BACKEND_URL}${img.image_url}` : img.image_url,
-            source: img.source,
-            page: img.page,
-            score: img.score
-          })),
-          timestamp: new Date().toISOString()
-        };
-        setChatHistory(prev => [...prev, aiMessage]);
-
-      } else if (selectedOption === 'Citrus Crop' && selectedImage) {
-        // Use image endpoint when image is uploaded (multimodal Q&A)
-        const formData = new FormData();
-        formData.append('file', selectedImage);
-        formData.append('query', currentQuery);
-
-        console.log('Sending image request to:', `${BACKEND_URL}/ask-with-image`);
-
-        const result = await fetch(`${BACKEND_URL}/ask-with-image`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!result.ok) {
-          const errorText = await result.text();
-          throw new Error(`HTTP error! status: ${result.status} - ${errorText}`);
-        }
-
-        data = await result.json();
-        clearImage();
-
-        // Format response for image query
-        const aiMessage = {
-          type: 'assistant',
-          message: data.answer || 'No response received',
-          sources: data.matched_sources || [],
-          confidence: data.confidence,
-          // Include related images if available
-          images: (data.related_images || []).map(url => ({
-            url: url.startsWith('/') ? `${BACKEND_URL}${url}` : url,
-            source: 'Related Image',
-            page: 0,
-            score: data.confidence || 0
-          })),
-          timestamp: new Date().toISOString()
-        };
-        setChatHistory(prev => [...prev, aiMessage]);
-
-      } else if (isImageSearchQuery) {
-        // Use HYBRID query endpoint for "show me image" queries (text-to-image)
-        console.log('Sending HYBRID image query to:', `${BACKEND_URL}/hybrid-image-query`);
-
-        const result = await fetch(`${BACKEND_URL}/hybrid-image-query`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: currentQuery,
-            top_k: 5
-          }),
-        });
-
-        if (!result.ok) {
-          const errorText = await result.text();
-          throw new Error(`HTTP error! status: ${result.status} - ${errorText}`);
-        }
-
-        data = await result.json();
-
-        // Format response with images
-        const imageResults = data.results || [];
-        const aiMessage = {
-          type: 'assistant',
-          message: imageResults.length > 0
-            ? `Here are ${imageResults.length} images matching your query:`
-            : 'No matching images found in the database.',
-          images: imageResults.map(img => ({
-            url: img.image_url.startsWith('/') ? `${BACKEND_URL}${img.image_url}` : img.image_url,
-            source: img.source,
-            page: img.page,
-            score: img.score
-          })),
-          timestamp: new Date().toISOString()
-        };
-        setChatHistory(prev => [...prev, aiMessage]);
-
-      } else {
-        // Use text endpoint
-        const endpoint = selectedOption === 'Citrus Crop'
-          ? '/ask-consultant'
-          : '/query-government-schemes';
-
-        console.log('Sending request to:', `${BACKEND_URL}${endpoint}`);
-
-        const formattedHistory = chatHistory
-          .filter(msg => msg.type === 'user' || msg.type === 'assistant')
-          .map(msg => ({
-            role: msg.type === 'user' ? 'user' : 'assistant',
-            content: msg.message
-          }));
-
-        const result = await fetch(`${BACKEND_URL}${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: currentQuery,
-            chat_history: formattedHistory
-          }),
-        });
-
-        if (!result.ok) {
-          const errorText = await result.text();
-          throw new Error(`HTTP error! status: ${result.status} - ${errorText}`);
-        }
-
-        data = await result.json();
-
-        const aiMessage = {
-          type: 'assistant',
-          message: data.response || 'No response received',
-          sources: data.sources || [],
-          timestamp: new Date().toISOString()
-        };
-        setChatHistory(prev => [...prev, aiMessage]);
-      }
-
-    } catch (error) {
-      console.error('Full error:', error);
-      const errorMessage = {
-        type: 'error',
-        message: `Error: ${error.message}. Please check the console for details.`,
-        timestamp: new Date().toISOString()
-      };
-      setChatHistory(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+  const startNewChat = () => {
+    if (messages.length > 0) {
+        setMessages([]);
+        setQuery('');
+        setCurrentChatId(uuidv4());
+        navigate('/consultant', { replace: true, state: {} });
     }
   };
 
@@ -246,163 +164,144 @@ const ConsultantPage = () => {
     }
   };
 
-  const clearChat = () => {
-    setChatHistory([]);
-    setQuery('');
-    clearImage();
-  };
+  const suggestions = selectedContext === 'Citrus Crop' ? [
+    "Identify this yellowing leaf disease",
+    "Best fertilizer for lemon trees?",
+    "How to treat citrus canker?",
+    "Watering schedule for sweet lime"
+  ] : [
+    "Am I eligible for PM Kisan?",
+    "Subsidies for drip irrigation?",
+    "How to apply for crop insurance?",
+    "Loans for organic farming"
+  ];
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
 
   return (
-    <div className="page-container flex items-center justify-center p-6">
-      <div className="content-card w-full max-w-4xl flex flex-col" style={{ height: 'calc(100vh - 3rem)', maxHeight: '900px' }}>
-        {/* Header */}
-        <div className="p-6 border-b border-[rgba(55,53,47,0.09)]">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="empty-state-icon" style={{ width: '2.5rem', height: '2.5rem', marginBottom: 0 }}>
-              🌾
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-notion-default tracking-tight">AgriGPT</h1>
-              <p className="text-sm text-notion-secondary">AI Agricultural Consultant</p>
-            </div>
-          </div>
+    <div className="flex h-screen bg-white overflow-hidden">
+      <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
 
-          {/* Topic Selector */}
-          <div className="max-w-xs">
-            <label className="block text-xs font-medium text-notion-secondary mb-1.5 uppercase tracking-wide">
-              Select Topic
-            </label>
-            <select
-              className="select-notion"
-              value={selectedOption}
-              onChange={(e) => setSelectedOption(e.target.value)}
-              disabled={isLoading}
-            >
-              {options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-6 bg-notion-bg-gray">
-          {chatHistory.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center">
-              <div className="empty-state-icon">💬</div>
-              <h3 className="text-lg font-semibold text-notion-default mb-1">
-                Ask me anything about {selectedOption}
-              </h3>
-              <p className="text-notion-secondary text-sm max-w-sm">
-                Start a conversation by typing your question below
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {chatHistory.map((msg, index) => (
-                <div key={index}>
-                  {msg.type === 'user' && (
-                    <div className="flex justify-end">
-                      <div className="message-user">
-                        {msg.image && (
-                          <img src={msg.image} alt="Uploaded crop" className="max-w-xs rounded mb-2" />
-                        )}
-                        <p className="text-sm text-notion-default whitespace-pre-wrap">{msg.message}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {msg.type === 'assistant' && (
-                    <div className="message-assistant">
-                      <p className="text-sm text-notion-default whitespace-pre-wrap leading-relaxed">{msg.message}</p>
-
-                      {/* Display images from CLIP query */}
-                      {msg.images && msg.images.length > 0 && (
-                        <div className="mt-3 grid grid-cols-2 gap-3">
-                          {msg.images.map((img, idx) => (
-                            <div key={idx} className="border border-[rgba(55,53,47,0.09)] rounded-lg overflow-hidden">
-                              <img
-                                src={img.url}
-                                alt={`Disease image from ${img.source}`}
-                                className="w-full h-32 object-cover"
-                                onError={(e) => { e.target.style.display = 'none'; }}
-                              />
-                              <div className="p-2 bg-notion-bg-gray">
-                                <p className="text-xs text-notion-secondary truncate">{img.source}</p>
-                                <p className="text-xs text-notion-tertiary">Page {img.page} • {(img.score * 100).toFixed(0)}% match</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {msg.sources && msg.sources.length > 0 && (
-                        <div className="mt-3 flex items-center gap-2 flex-wrap">
-                          <span className="text-xs text-notion-tertiary">📎 Sources:</span>
-                          {msg.sources.map((source, idx) => (
-                            <span key={idx} className="source-tag">{source}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {msg.type === 'error' && (
-                    <div className="message-error">
-                      <p className="text-sm">⚠️ {msg.message}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {isLoading && (
-                <div className="flex items-center gap-3 text-notion-secondary">
-                  <div className="spinner-notion"></div>
-                  <span className="text-sm">Thinking...</span>
-                </div>
+      <main className="flex-1 flex flex-col h-full bg-white relative">
+        
+        {/* --- FIXED DROPDOWN HEADER --- */}
+        <header className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white z-10 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 text-sm">Context:</span>
+            
+            <div className="relative">
+              {/* Trigger Button */}
+              <button 
+                onClick={() => setIsContextOpen(!isContextOpen)}
+                className="flex items-center gap-2 font-semibold text-gray-800 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-transparent focus:border-green-200"
+              >
+                {selectedContext} 
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isContextOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Invisible Backdrop */}
+              {isContextOpen && (
+                <div 
+                  className="fixed inset-0 z-10 cursor-default" 
+                  onClick={() => setIsContextOpen(false)}
+                ></div>
               )}
 
+              {/* Dropdown Menu */}
+              {isContextOpen && (
+                <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-1 z-20 animate-in fade-in zoom-in-95 duration-100">
+                  <button 
+                    onClick={() => { setSelectedContext('Government Schemes'); startNewChat(); setIsContextOpen(false); }} 
+                    className={`w-full text-left px-4 py-3 rounded-lg text-sm flex items-center gap-3 ${selectedContext === 'Government Schemes' ? 'bg-green-50 text-green-700 font-medium' : 'hover:bg-gray-50 text-gray-700'}`}
+                  >
+                    <span className="text-lg">🏛️</span> Government Schemes
+                  </button>
+                  <button 
+                    onClick={() => { setSelectedContext('Citrus Crop'); startNewChat(); setIsContextOpen(false); }} 
+                    className={`w-full text-left px-4 py-3 rounded-lg text-sm flex items-center gap-3 ${selectedContext === 'Citrus Crop' ? 'bg-orange-50 text-orange-700 font-medium' : 'hover:bg-gray-50 text-gray-700'}`}
+                  >
+                    <span className="text-lg">🍋</span> Citrus Crop Protection
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Chat Area */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto pb-20">
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-sm ${selectedContext === 'Citrus Crop' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+                 <Sparkles className="w-8 h-8" />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-800 mb-3">{selectedContext === 'Citrus Crop' ? 'Citrus Expert' : 'Scheme Advisor'}</h2>
+              <div className="grid grid-cols-2 gap-3 w-full max-w-lg mt-8">
+                {suggestions.map((text, idx) => (
+                  <button key={idx} onClick={() => handleSubmit(text)} className="text-sm text-left p-4 rounded-xl border border-gray-200 hover:border-green-500 hover:bg-green-50/30 transition-all text-gray-600">{text}</button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto space-y-6 pb-24">
+              {messages.map((msg, index) => (
+                <div key={index} className="animate-in fade-in slide-in-from-bottom-2">
+                  <div className={`flex ${msg.type === 'user' ? 'justify-end' : 'gap-4'}`}>
+                    {msg.type === 'assistant' && <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 text-lg">🤖</div>}
+                    <div className={`${msg.type === 'user' ? 'bg-gray-100 max-w-[85%]' : 'flex-1'} px-5 py-3 rounded-2xl ${msg.type === 'user' ? 'rounded-tr-sm' : ''}`}>
+                      {msg.image && <img src={msg.image} className="max-h-48 rounded-lg mb-2 object-cover" alt="User upload" />}
+                      <p className="text-gray-800 text-sm whitespace-pre-wrap">{msg.message}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {isLoading && <div className="text-center text-gray-400 text-sm animate-pulse">Thinking...</div>}
               <div ref={chatEndRef} />
             </div>
           )}
         </div>
 
         {/* Input Area */}
-               {/* Input Area */}
-       <div className="p-4 border-t border-[rgba(55,53,47,0.09)] bg-white">
-  <div className="flex items-center gap-3">
-    <textarea
-      className="input-notion flex-1 resize-none py-3"
-      placeholder="Ask your question... (Press Enter to send)"
-      value={query}
-      onChange={(e) => setQuery(e.target.value)}
-      onKeyPress={handleKeyPress}
-      disabled={isLoading}
-      rows={2}
-      style={{ minHeight: '44px' }}
-    />
+        <div className="p-4 bg-white/90 backdrop-blur border-t border-gray-100 shrink-0">
+          <div className="max-w-3xl mx-auto relative">
+            {imagePreview && (
+              <div className="absolute -top-16 left-0 bg-white p-2 rounded-lg shadow border flex items-center gap-2">
+                <img src={imagePreview} className="w-10 h-10 rounded object-cover" alt="Preview" />
+                <button onClick={() => {setImagePreview(null); setSelectedImage(null);}}><X className="w-4 h-4"/></button>
+              </div>
+            )}
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex items-end p-2 focus-within:ring-2 focus-within:ring-green-500/20 focus-within:border-green-500 transition-all">
+               {selectedContext === 'Citrus Crop' && (
+                 <>
+                   <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                   <button onClick={() => fileInputRef.current.click()} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg"><Camera className="w-5 h-5"/></button>
+                 </>
+               )}
+               <textarea 
+                 name="chatQuery" 
+                 id="chatInput" 
+                 value={query} 
+                 onChange={e => setQuery(e.target.value)} 
+                 onKeyPress={handleKeyPress} 
+                 placeholder={`Message AgriGPT (${selectedContext})...`} 
+                 className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-32 py-2.5 px-3 text-sm" 
+                 rows={1} 
+               />
+               <button onClick={() => handleSubmit()} disabled={isLoading} className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"><Send className="w-4 h-4" /></button>
+            </div>
+            <p className="text-center text-[10px] text-gray-400 mt-2">AI can make mistakes. Verify important info.</p>
+          </div>
+        </div>
 
-    <button
-      className="btn-notion btn-notion-primary px-5 py-2.5 rounded-md"
-      onClick={handleSubmit}
-      disabled={isLoading || !query.trim()}
-      style={{ height: '44px' }}   // <-- Matches textarea height
-    >
-      {isLoading ? (
-        <span
-          className="spinner-notion border-white border-t-transparent"
-          style={{ width: '16px', height: '16px' }}
-        ></span>
-      ) : (
-        'Send'
+      </main>
+      
+      {expandedImage && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setExpandedImage(null)}>
+          <img src={expandedImage} className="max-h-[90vh] rounded-lg" alt="Full" />
+        </div>
       )}
-    </button>
-  </div>
-</div>
-
-      </div>
     </div>
   );
 };
