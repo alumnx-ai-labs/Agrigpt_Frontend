@@ -137,7 +137,7 @@ const ChatViewerPage = () => {
       }
 
       const aiData = await aiResponse.json();
-      const aiText = aiData.answer || aiData.response || "Processing...";
+      const aiText = aiData.answer || aiData.response
 
       await fetch(`${BACKEND_URL}/chats`, {
         method: 'POST',
@@ -221,7 +221,7 @@ const ChatViewerPage = () => {
                   {msg.messageSource === 'user' && <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center"><User className="w-4 h-4 text-gray-500" /></div>}
                 </div>
               ))}
-              {isSending && <div className="text-center text-xs text-gray-400 animate-pulse">AgriGPT is typing...</div>}
+              {isSending && <div className="text-center text-xs text-gray-400 animate-pulse">Loading...</div>}
               <div ref={chatEndRef} />
             </div>
           )}
