@@ -20,7 +20,7 @@ if (process.env.NODE_ENV === 'development') {
   };
 }
 
-const BACKEND_URL = 'https://agrigpt-backend-rag.onrender.com';
+const BACKEND_URL = 'https://api.alumnx.com/api/agrigpt';
 const HEARTBEAT_MS = 30_000;
 
 export default function LoginPage() {
