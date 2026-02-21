@@ -17,6 +17,8 @@ const TRANSLATIONS = {
     uploadPhoto: 'Upload Photo', capturePhoto: 'Capture Photo',
     errorTitle: 'Something went wrong', errorRetry: 'Try Again',
     thinking: 'AgriGPT is thinking...',
+    voiceAssistant: 'Voice Assistant', micSupported: 'Voice recognition is not supported in this browser.',
+    listening: 'Listening...', voiceError: 'Speech recognition error',
     khariSeason: 'Kharif Season 2026', myFarm: 'My Farm',
     searchChat: 'Search or start new chat',
   },
@@ -34,6 +36,8 @@ const TRANSLATIONS = {
     uploadPhoto: 'फोटो अपलोड', capturePhoto: 'फोटो कैप्चर',
     errorTitle: 'कुछ गलत हुआ', errorRetry: 'पुनः प्रयास',
     thinking: 'AgriGPT सोच रहा है...',
+    voiceAssistant: 'आवाज सहायक', micSupported: 'इस ब्राउज़र में आवाज पहचान समर्थित नहीं है।',
+    listening: 'सुन रहा हूँ...', voiceError: 'भाषण पहचान त्रुटि',
     khariSeason: 'खरीफ सीजन 2026', myFarm: 'मेरा खेत', searchChat: 'खोजें या नई चैट शुरू करें',
   },
   te: {
@@ -50,6 +54,8 @@ const TRANSLATIONS = {
     uploadPhoto: 'ఫోటో అప్‌లోడ్', capturePhoto: 'ఫోటో క్యాప్చర్',
     errorTitle: 'ఏదో తప్పు జరిగింది', errorRetry: 'మళ్ళీ ప్రయత్నించండి',
     thinking: 'AgriGPT ఆలోచిస్తోంది...',
+    voiceAssistant: 'వాయిస్ అసిస్టెంట్', micSupported: 'ఈ బ్రౌజర్‌లో వాయిస్ రికగ్నిషన్ సపోర్ట్ లేదు.',
+    listening: 'వింటున్నాను...', voiceError: 'వాయిస్ రికగ్నిషన్ లోపం',
     khariSeason: 'ఖరీఫ్ సీజన్ 2026', myFarm: 'నా పొలం', searchChat: 'వెతకండి',
   },
 }

@@ -4,8 +4,9 @@
  */
 
 export const API_CONFIG = {
-  // Base URL for the AgriGPT backend (proxied through Vite/Vercel to avoid CORS)
-  BASE_URL: '/api/agent',
+  // Base URL for the AgriGPT backend
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  SPEECH_BASE_URL: import.meta.env.VITE_SPEECH_API_URL || 'http://localhost:8001',
 
   // Image upload base URL
   // In production, use Vercel serverless proxy to avoid HTTPS/HTTP mixed content issues
@@ -14,7 +15,7 @@ export const API_CONFIG = {
 
   // API endpoints
   ENDPOINTS: {
-    WHATSAPP: '/test/chat',
+    WHATSAPP: '/whatsapp',
     IMAGE_UPLOAD: '/query-image-upload',
   },
 
