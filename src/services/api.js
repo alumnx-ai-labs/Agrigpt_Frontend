@@ -52,7 +52,6 @@ export async function sendTextQuery(phoneNumber, query, chatId, language) {
           phoneNumber: formattedPhone,
           phone_number: formattedPhone,
           message: query,
-          query: query,
           chatId,
           language,
         }),
