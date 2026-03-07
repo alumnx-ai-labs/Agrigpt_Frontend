@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/fastapi/:path*",
+      "destination": "https://newapi.alumnx.com/agrigpt/fastapi/:path*"
+    },
+    {
+      "source": "/api/cv/:path*",
+      "destination": "https://newapi.alumnx.com/agrigpt/cv/:path*"
+    },
+    {
+      "source": "/api/speech/:path*",
+      "destination": "https://newapi.alumnx.com/agrigpt/speech/:path*"
+    }
+  ]
+}
