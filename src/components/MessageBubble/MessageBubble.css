@@ -59,6 +59,7 @@
   line-height: 1.55;
   white-space: pre-wrap;
   margin: 0;
+  word-break: break-word;
 }
 
 /* Image */
@@ -80,6 +81,15 @@
   font-size: 13px;
   opacity: 0.85;
   margin: 0;
+}
+
+/* Text content */
+.bubble__text {
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  margin: 0;
+  word-break: break-word;
 }
 
 /* Sources */
