@@ -13,17 +13,12 @@
  */
 
 export const API_CONFIG = {
-  // Agent backend — uses env var on Render, proxy path on Vercel/dev
-  BASE_URL: import.meta.env.VITE_AGENT_URL || "/api/agent",
-
-  // RAG service — uses env var on Render, proxy path on Vercel/dev
-  IMAGE_BASE_URL: import.meta.env.VITE_RAG_URL || "/api/rag",
-
-  // Computer Vision backend — uses env var on Render, proxy path on Vercel/dev
-  DRONE_BASE_URL: import.meta.env.VITE_CV_URL || "/api/cv",
-
-  // Speech service — uses env var on Render, proxy path on Vercel/dev
-  SPEECH_BASE_URL: import.meta.env.VITE_SPEECH_URL || "/api/speech",
+  // All requests use /api/* proxy paths.
+  // Dev: proxied by vite.config.js | Render/Vercel: proxied by server.js / vercel.json
+  BASE_URL: "/api/agent",
+  IMAGE_BASE_URL: "/api/rag",
+  DRONE_BASE_URL: "/api/cv",
+  SPEECH_BASE_URL: "/api/speech",
 
   // API endpoints
   ENDPOINTS: {
