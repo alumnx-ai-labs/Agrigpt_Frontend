@@ -1,27 +1,29 @@
 /**
  * API Configuration
  *
- * Production (Vercel): all /api/* routes proxied by vercel.json:
- *   /api/agent/*   → VITE_AGENT_URL   (AgriGPT agent backend — receives chat, calls RAG internally)
- *   /api/rag/*     → VITE_RAG_URL     (RAG service — image upload & retrieval)
- *   /api/cv/*      → VITE_CV_URL      (Computer Vision — drone analysis)
- *   /api/speech/*  → VITE_SPEECH_URL  (Speech service)
+ * Render (Static Site): set VITE_* env vars in Render dashboard — Vite bakes them
+ *   into the bundle at build time, so the browser calls the backends directly.
+ *   The backends must allow CORS from the Render frontend URL.
  *
- * Development: set VITE_*_URL vars in .env to your local servers.
+ * Vercel: VITE_* vars are NOT set — falls back to /api/* proxy paths which
+ *   vercel.json rewrites to the real backends (no CORS needed).
+ *
+ * Development: VITE_* vars are NOT set — falls back to /api/* proxy paths which
+ *   vite.config.js proxies to the real backends (no CORS needed).
  */
 
 export const API_CONFIG = {
-  // Agent backend — always via proxy (/api/agent) to avoid CORS in dev and prod
-  BASE_URL: "/api/agent",
+  // Agent backend — uses env var on Render, proxy path on Vercel/dev
+  BASE_URL: import.meta.env.VITE_AGENT_URL || "/api/agent",
 
-  // RAG service — always via proxy (/api/rag) to avoid CORS in dev and prod
-  IMAGE_BASE_URL: "/api/rag",
+  // RAG service — uses env var on Render, proxy path on Vercel/dev
+  IMAGE_BASE_URL: import.meta.env.VITE_RAG_URL || "/api/rag",
 
-  // Computer Vision backend — always via proxy to avoid CORS
-  DRONE_BASE_URL: "/api/cv",
+  // Computer Vision backend — uses env var on Render, proxy path on Vercel/dev
+  DRONE_BASE_URL: import.meta.env.VITE_CV_URL || "/api/cv",
 
-  // Speech service — always via proxy to avoid CORS
-  SPEECH_BASE_URL: "/api/speech",
+  // Speech service — uses env var on Render, proxy path on Vercel/dev
+  SPEECH_BASE_URL: import.meta.env.VITE_SPEECH_URL || "/api/speech",
 
   // API endpoints
   ENDPOINTS: {
