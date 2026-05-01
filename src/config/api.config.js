@@ -2,40 +2,30 @@
  * API Configuration
  *
  * Production (Vercel): all /api/* routes proxied by vercel.json:
- *   /api/agent/*   → VITE_AGENT_URL   (AgriGPT agent — chat)
- *   /api/fastapi/* → VITE_FASTAPI_URL (Original FastAPI — image upload)
+ *   /api/agent/*   → VITE_AGENT_URL   (AgriGPT agent backend — receives chat, calls RAG internally)
+ *   /api/rag/*     → VITE_RAG_URL     (RAG service — image upload & retrieval)
  *   /api/cv/*      → VITE_CV_URL      (Computer Vision — drone analysis)
  *   /api/speech/*  → VITE_SPEECH_URL  (Speech service)
  *
  * Development: set VITE_*_URL vars in .env to your local servers.
  */
 
-const isProd = import.meta.env.PROD;
-
 export const API_CONFIG = {
-  // FastAPI backend — handles all chat (calls agent internally, returns sources)
-  BASE_URL: isProd
-    ? "/api/fastapi"
-    : import.meta.env.VITE_FASTAPI_URL || "http://localhost:8000",
+  // Agent backend — always via proxy (/api/agent) to avoid CORS in dev and prod
+  BASE_URL: "/api/agent",
 
-  // Original FastAPI backend — handles image upload (/query-image-upload)
-  IMAGE_BASE_URL: isProd
-    ? "/api/fastapi"
-    : import.meta.env.VITE_FASTAPI_URL || "http://localhost:8001",
+  // RAG service — always via proxy (/api/rag) to avoid CORS in dev and prod
+  IMAGE_BASE_URL: "/api/rag",
 
-  // Computer Vision backend — handles drone video, frame capture, analysis
-  DRONE_BASE_URL: isProd
-    ? "/api/cv"
-    : import.meta.env.VITE_CV_URL || "http://localhost:8000",
+  // Computer Vision backend — always via proxy to avoid CORS
+  DRONE_BASE_URL: "/api/cv",
 
-  // Speech service
-  SPEECH_BASE_URL: isProd
-    ? "/api/speech"
-    : import.meta.env.VITE_SPEECH_URL || "http://localhost:8002",
+  // Speech service — always via proxy to avoid CORS
+  SPEECH_BASE_URL: "/api/speech",
 
   // API endpoints
   ENDPOINTS: {
-    WHATSAPP: "/whatsapp",
+    QUERY: "/query",
     IMAGE_UPLOAD: "/query-image-upload",
     VIDEO_QUERY: "/image-query",
   },

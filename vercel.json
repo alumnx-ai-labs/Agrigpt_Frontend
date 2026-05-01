@@ -1,8 +1,12 @@
 {
   "routes": [
     {
-      "src": "/api/fastapi/(.*)",
-      "dest": "https://newapi.alumnx.com/agrigpt/fastapi/$1"
+      "src": "/api/agent/(.*)",
+      "dest": "https://agrigpt-agent-backend.onrender.com/$1"
+    },
+    {
+      "src": "/api/rag/(.*)",
+      "dest": "https://agrigpt-rag-service.onrender.com/$1"
     },
     {
       "src": "/api/cv/(.*)",

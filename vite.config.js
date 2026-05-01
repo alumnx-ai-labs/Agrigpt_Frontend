@@ -6,14 +6,14 @@ export default defineConfig({
   server: {
     proxy: {
       "/api/agent": {
-        target: "https://newapi.alumnx.com/agrigpt/agent",
+        target: "https://agrigpt-agent-backend.onrender.com",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/agent/, ""),
       },
-      "/api/fastapi": {
-        target: "https://newapi.alumnx.com/agrigpt/fastapi",
+      "/api/rag": {
+        target: "https://agrigpt-rag-service.onrender.com",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/fastapi/, ""),
+        rewrite: (path) => path.replace(/^\/api\/rag/, ""),
       },
       "/api/cv": {
         target: "https://newapi.alumnx.com/agrigpt/cv",

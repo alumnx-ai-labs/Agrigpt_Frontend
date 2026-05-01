@@ -40,20 +40,15 @@ function extractResponse(data) {
 
 export async function sendTextQuery(phoneNumber, query, chatId, language) {
   try {
-    const formattedPhone =
-      phoneNumber.length === 10 ? `91${phoneNumber}` : phoneNumber;
-
     const response = await fetch(
-      `${BASE_URL}${API_CONFIG.ENDPOINTS.WHATSAPP}`,
+      `${BASE_URL}${API_CONFIG.ENDPOINTS.QUERY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phoneNumber: formattedPhone,
-          phone_number: formattedPhone,
-          message: query,
-          chatId,
-          language,
+          question: query,
+          top_k: 5,
+          chat_id: chatId || null,
         }),
       },
     );
