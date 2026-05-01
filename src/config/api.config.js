@@ -15,7 +15,7 @@
 export const API_CONFIG = {
   // All requests use /api/* proxy paths.
   // Dev: proxied by vite.config.js | Render/Vercel: proxied by server.js / vercel.json
-  BASE_URL: "/api/rag",
+  BASE_URL: "/api/agent",
   IMAGE_BASE_URL: "/api/rag",
   DRONE_BASE_URL: "/api/cv",
   SPEECH_BASE_URL: "/api/speech",
